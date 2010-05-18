@@ -83,6 +83,11 @@ AltTab.AltTabPopup.prototype.show = function(backward, dont_check) {
             this._select(1);
         }
     }
+    let [x, y, mods] = global.get_pointer();
+    if (!(mods & Gdk.ModifierType.MOD1_MASK) && !dont_check) {
+        this._finish();
+        return false;
+    }
     return true;
 }
 
