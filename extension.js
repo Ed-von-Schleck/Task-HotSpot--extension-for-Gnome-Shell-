@@ -18,7 +18,7 @@ _show_next = true;
 
 function _showAltTabPopup () {   
     if (_show_next) {
-        if (global.get_windows().length >= 3) {
+        if (global.get_windows().length >= 3 && !Main.overview.visible) {
             let tabPopup = new AltTab.AltTabPopup();
             tabPopup.show(true, true);
         }
