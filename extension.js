@@ -98,9 +98,9 @@ AltTab.AltTabPopup.prototype.show = function(backward, dont_check) {
 // monkey-patching to avoid the task switcher popping up instantly after
 // closing when the cursor is still over the clock.
 AltTab.AltTabPopup.prototype._clickedOutside = function(actor, event) {
-    [x, y] = Main.panel._clockButton.get_transformed_position();
-    [sx, sy] = Main.panel._clockButton.get_size();
-    [ex, ey] = event.get_coords();
+    let [x, y] = Main.panel._clockButton.get_transformed_position();
+    let [sx, sy] = Main.panel._clockButton.get_size();
+    let [ex, ey] = event.get_coords();
     this.destroy();
     if (ex < x + sx && ex > x && ey < sy)
         _show_next = false;
@@ -127,7 +127,7 @@ AltTab.AltTabPopup.prototype._allocate = function (actor, box, flags) {
     let [ex, ey, mods] = global.get_pointer();
     if (!(mods & Gdk.ModifierType.MOD1_MASK)) {
         // alt not pressed:
-        [sx, sy] = Main.panel._clockButton.get_size();
+        let [sx, sy] = Main.panel._clockButton.get_size();
         childBox.y1 = focus.y + sy;
     } else {
         childBox.y1 = focus.y + Math.floor((focus.height - childNaturalHeight) / 2);
