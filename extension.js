@@ -16,8 +16,10 @@ _show_next = true;
 
 function _showAltTabPopup () {   
     if (_show_next) {
-        let tabPopup = new AltTab.AltTabPopup();
-        tabPopup.show(true, true);
+        if (global.get_windows().length >= 3) {
+            let tabPopup = new AltTab.AltTabPopup();
+            tabPopup.show(true, true);
+        }
     } else {
         _show_next = true;
     }
