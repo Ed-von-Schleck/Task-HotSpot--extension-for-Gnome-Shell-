@@ -1,8 +1,14 @@
-// hovering over the clock brings up the Alt-Tab task switcher
-//
-// Copyright 2010 Christian Schramm <christian.h.m.schramm@gmail.com>
-// You might do anything you wish with this software, but don't sue me
-// if something breaks.
+/*
+* hovering over the clock brings up the Alt-Tab task switcher
+* 
+* ----------------------------------------------------------------------------
+* "THE BEER-WARE LICENSE" (Revision 42):
+* <christian.h.m.schramm@gmail.com> wrote this file. As long as you retain
+* this notice you can do whatever you want with this stuff. If we meet some
+* day, and you think this stuff is worth it, you can buy me a beer in return.
+* Christian Schramm
+* ----------------------------------------------------------------------------
+*/
 
 const Shell = imports.gi.Shell;
 const Gdk = imports.gi.Gdk;
@@ -14,28 +20,56 @@ const Lang = imports.lang;
 const Main = imports.ui.main;
 const AltTab = imports.ui.altTab;
 
-_show_next = true;
+const STAY_OPEN_WHEN_UNFOCUSED_TIME = 3000; // Milliseconds
 
-function _showAltTabPopup () {   
-    if (_show_next) {
-        if (global.get_windows().length >= 3 && !Main.overview.visible) {
-            let tabPopup = new AltTab.AltTabPopup();
-            tabPopup.show(true, true);
+//_show_next = true;
+
+function PopupManager() {
+    this._init();
+}
+
+PopupManager.prototype = {
+    _init : function() {
+        this._timeOutId = 0;
+        this.showNext = true;
+        this._tabPopup = null;
+    },
+    
+    show : function(actor, event) {
+        if (this.showNext) {
+            if (global.get_windows().length >= 3 && !Main.overview.visible) {
+                this._tabPopup = new AltTab.AltTabPopup();
+                this._tabPopup.show(true, true, this);
+                this._tabPopup.actor.connect('button-release-event', Lang.bind(this, this._on_button_press));
+                //if (this._timeOutId != 0) {
+                //    Mainloop.source_remove(this._timedOut);
+                //}
+
+                //this._timeOutId = Mainloop.timeout_add(STAY_OPEN_WHEN_UNFOCUSED_TIME, Lang.bind(this, this._timedOut));
+            }
+        } else {
+            this.showNext = true;
         }
-    } else {
-        _show_next = true;
+    },
+
+    
+    _timedOut : function() {
+        if (this._timeOutId != 0) {
+            Mainloop.source_remove(this._timedOut);
+        }
+        if (this._tabPopup) {
+            this._tabPopup.destroy();
+        }
     }
 }
 
 function main() {
-    Main.panel._clockButton.connect('enter-event', _showAltTabPopup);
+    popupManager = new PopupManager();
+    Main.panel._clockButton.connect('enter-event', popupManager.show);
 }
 
-AppSwitcher = AltTab.AppSwitcher
-
-// monkey-patching to get rid of the check if the alt-key is pressed
-
-AltTab.AltTabPopup.prototype.show = function(backward, dont_check) {
+// monkey-patched to get rid of the check if the alt-key is pressed
+AltTab.AltTabPopup.prototype.show = function(backward, dont_check, popupManager) {
     if (!dont_check)
         dont_check = false;
     let tracker = Shell.WindowTracker.get_default();
@@ -51,10 +85,10 @@ AltTab.AltTabPopup.prototype.show = function(backward, dont_check) {
     this._keyPressEventId = global.stage.connect('key-press-event', Lang.bind(this, this._keyPressEvent));
     this._keyReleaseEventId = global.stage.connect('key-release-event', Lang.bind(this, this._keyReleaseEvent));
 
-    this.actor.connect('button-press-event', Lang.bind(this, this._clickedOutside));
+    this.actor.connect('button-press-event', Lang.bind(this, this._clickedOutside, popupManager));
     this.actor.connect('scroll-event', Lang.bind(this, this._onScroll));
 
-    this._appSwitcher = new AppSwitcher(apps);
+    this._appSwitcher = new AltTab.AppSwitcher(apps);
     this.actor.add_actor(this._appSwitcher.actor);
     this._appSwitcher.connect('item-activated', Lang.bind(this, this._appActivated));
     this._appSwitcher.connect('item-entered', Lang.bind(this, this._appEntered));
@@ -97,13 +131,16 @@ AltTab.AltTabPopup.prototype.show = function(backward, dont_check) {
 
 // monkey-patching to avoid the task switcher popping up instantly after
 // closing when the cursor is still over the clock.
-AltTab.AltTabPopup.prototype._clickedOutside = function(actor, event) {
-    let [x, y] = Main.panel._clockButton.get_transformed_position();
-    let [sx, sy] = Main.panel._clockButton.get_size();
-    let [ex, ey] = event.get_coords();
+AltTab.AltTabPopup.prototype._clickedOutside = function(actor, event, popupManager) {
     this.destroy();
-    if (ex < x + sx && ex > x && ey < sy)
-        _show_next = false;
+    // there is probably a more clutter-y way to do that ...
+    if (popupManager) {
+        let [x, y] = Main.panel._clockButton.get_transformed_position();
+        let [sx, sy] = Main.panel._clockButton.get_size();
+        let [ex, ey] = event.get_coords();
+        popupManager.showNext = !(ex < x + sx && ex > x && ey < sy);
+    }
+
 }
 
 AltTab.AltTabPopup.prototype._allocate = function (actor, box, flags) {
